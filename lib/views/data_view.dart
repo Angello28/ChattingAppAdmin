@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chatting_app_admin/Models/message_data.dart';
 import 'package:universal_html/html.dart' show AnchorElement;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 
 class DataView extends StatefulWidget {
   @override
@@ -17,6 +18,7 @@ class DataView extends StatefulWidget {
 
 class _DataViewState extends State<DataView> {
   List<dynamic> _dataList = [];
+  Map<String, String> _dataMap = {};
 
   Future getDataList() async {
     var collections = await FirebaseFirestore.instance
@@ -154,11 +156,29 @@ class _DataViewState extends State<DataView> {
                                                       color: Colors.white70),
                                                   child: TextField(
                                                     maxLines: 1,
+                                                    maxLength: 1,
+                                                    inputFormatters: <
+                                                        TextInputFormatter>[
+                                                      FilteringTextInputFormatter
+                                                          .allow(
+                                                              RegExp("[0-1]")),
+                                                    ],
                                                     textAlign: TextAlign.center,
+                                                    onChanged: (content) {
+                                                      setState(() {
+                                                        if (content
+                                                            .isNotEmpty) {
+                                                          datum['correction'] =
+                                                              content;
+                                                          _dataMap[datum['id']] = datum['correction'];
+                                                        }
+                                                      });
+                                                    },
                                                     textAlignVertical:
                                                         TextAlignVertical
                                                             .center,
                                                     decoration: InputDecoration(
+                                                      counterText: '',
                                                       floatingLabelBehavior:
                                                           FloatingLabelBehavior
                                                               .never,
@@ -181,17 +201,30 @@ class _DataViewState extends State<DataView> {
                                                           const TextStyle(
                                                               color:
                                                                   Colors.black),
-                                                      enabled: false,
+                                                      enabled: true,
                                                       label: Center(
-                                                          child: Text(
-                                                              datum['correction']
-                                                                  .toString())),
+                                                          child: Text(datum[
+                                                                  'correction']
+                                                              .toString())),
                                                       contentPadding:
                                                           EdgeInsets.zero,
                                                     ),
                                                   )))),
                                       NeumorphicButton(
-                                        onPressed: () {},
+                                        onPressed: () {
+                                          setState(() {
+                                            final docUser = FirebaseFirestore
+                                                .instance
+                                                .collection('MessageData')
+                                                .doc(datum['id']);
+                                            final correction = int.parse(
+                                                _dataMap[datum['id']]
+                                                    .toString());
+
+                                            docUser.update(
+                                                {'correction': correction});
+                                          });
+                                        },
                                         style: NeumorphicStyle(
                                             shape: NeumorphicShape.convex,
                                             boxShape:

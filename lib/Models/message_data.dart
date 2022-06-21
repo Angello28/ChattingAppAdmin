@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class Data {
+  String? id;
   String? message;
   int? label;
   int? correction;
@@ -11,6 +12,7 @@ class Data {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'message': message,
       'label': label,
       'correction': correction,
@@ -19,12 +21,14 @@ class Data {
   }
 
   Data.fromSnapshot(snapshot)
-      : message = snapshot.data()['message'],
+      : id = snapshot.id,
+        message = snapshot.data()['message'],
         label = snapshot.data()['label'],
         correction = snapshot.data()['correction'],
         created_at = snapshot.data()['created_at'].toDate();
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'message': message,
         'label': label,
         'correction': correction,
