@@ -38,6 +38,10 @@ dependencies:
   firebase_core: ^1.18.0
   cloud_firestore: ^3.1.18
   firebase_database: ^9.0.16
+  syncfusion_flutter_xlsio: ^20.1.61-beta
+  universal_html: ^2.0.8
+  path_provider: ^2.0.11
+  open_file: ^2.1.1
 
 dev_dependencies:
   flutter_test:
