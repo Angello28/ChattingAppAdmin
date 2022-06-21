@@ -1,20 +1,35 @@
+import 'dart:html';
+
 import 'package:chatting_app_admin/components/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:chatting_app_admin/components/const.dart';
 import 'package:chatting_app_admin/components/class.dart';
 import 'package:flutter_neumorphic/flutter_neumorphic.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chatting_app_admin/Models/message_data.dart';
+
 
 class DataView extends StatefulWidget {
-  const DataView({Key? key}) : super(key: key);
+  // const DataView({Key? key}) : super(key: key);
 
   @override
   State<DataView> createState() => _DataViewState();
 }
 
 class _DataViewState extends State<DataView> {
+  List<dynamic> _dataList = [];
+
+  Future getDataList() async {
+    var collections = await FirebaseFirestore.instance.collection('MessageData')
+        .orderBy('created_at', descending: true).get();
+    setState((){
+      _dataList = List.from(collections.docs.map((doc) => Data.fromSnapshot(doc).toJson()));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    getDataList();
     return Container(
       height: Responsive.isDesktop(context) ? defaultHeight(context)*9/10 : defaultHeight(context),
       padding: EdgeInsets.symmetric(horizontal: defaultWidth(context)/50, vertical: defaultHeight(context)/50),
@@ -29,10 +44,10 @@ class _DataViewState extends State<DataView> {
                 boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(10)),
                 depth: 2,
                 lightSource: LightSource.topLeft,
-                color: Color(0xff50A3C6),
-                shadowDarkColor: Color(0xff858594)
+                color: const Color(0xff50A3C6),
+                shadowDarkColor: const Color(0xff858594)
               ),
-              child: Text(
+              child: const Text(
                 "Ekspor Spreadsheet (*.xlsx)",
                 style: TextStyle(
                   color: Colors.white
@@ -50,7 +65,7 @@ class _DataViewState extends State<DataView> {
                 boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(10)),
                 depth: 3,
                 lightSource: LightSource.topLeft,
-                shadowDarkColor: Color(0xff858594)
+                shadowDarkColor: const Color(0xff858594)
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -62,7 +77,7 @@ class _DataViewState extends State<DataView> {
                       child: Column(
                         children: [
                           Table(
-                            columnWidths: {
+                            columnWidths: const {
                               0: FractionColumnWidth(0.8),
                               1: FractionColumnWidth(0.2),
                             },
@@ -75,11 +90,12 @@ class _DataViewState extends State<DataView> {
                               ),
                               TableRow(
                                 children: [
-                                  SizedBox(height:defaultHeight(context)/15, child: Material(color: Colors.transparent, child: Text("Kalimat"))),
-                                  Material(color: Colors.transparent, child: Text("Label")),
+                                  SizedBox(height:defaultHeight(context)/15, child: const Material(color: Colors.transparent, child: const Text("Kalimat"))),
+                                  // const Material(color: Colors.transparent, child: const Text("Correction")),
+                                  const Material(color: Colors.transparent, child: const Text("Label")),
                                 ]
                               ),
-                              for(var data in listData)
+                              for(var datum in _dataList)
                                 TableRow(
                                   children: [
                                     SizedBox(
@@ -89,7 +105,7 @@ class _DataViewState extends State<DataView> {
                                         child: Align(
                                           alignment: Alignment.centerLeft,
                                           child: Text(
-                                            data.message
+                                           datum['message']
                                           ),
                                         )
                                       )
@@ -102,7 +118,7 @@ class _DataViewState extends State<DataView> {
                                           height: defaultHeight(context)/20,
                                           child: Material(
                                             child: Neumorphic(
-                                              style: NeumorphicStyle(
+                                              style: const NeumorphicStyle(
                                                 shape: NeumorphicShape.convex,
                                                 depth: -2,
                                                 lightSource: LightSource.topLeft,
@@ -114,20 +130,22 @@ class _DataViewState extends State<DataView> {
                                                 textAlignVertical: TextAlignVertical.center,
                                                 decoration: InputDecoration(
                                                   floatingLabelBehavior: FloatingLabelBehavior.never,
-                                                  enabledBorder: OutlineInputBorder(
+                                                  enabledBorder: const OutlineInputBorder(
                                                     borderSide: BorderSide.none
                                                   ),
-                                                  focusedBorder: OutlineInputBorder(
+                                                  focusedBorder: const OutlineInputBorder(
                                                     borderSide: BorderSide.none
                                                   ),
-                                                  disabledBorder: OutlineInputBorder(
+                                                  disabledBorder: const OutlineInputBorder(
                                                     borderSide: BorderSide.none,
                                                   ),
-                                                  labelStyle: TextStyle(
+                                                  labelStyle: const TextStyle(
                                                     color: Colors.black
                                                   ),
                                                   enabled: false,
-                                                  label: Center(child: Text(data.label)),
+                                                  label: Center(child: Text(
+                                                      datum['label'].toString()
+                                                  )),
                                                   contentPadding: EdgeInsets.zero,
                                                 ),
                                               )
@@ -136,7 +154,6 @@ class _DataViewState extends State<DataView> {
                                         ),
                                         NeumorphicButton(
                                           onPressed: (){},
-                                          child: Icon(Icons.edit, size: defaultHeight(context)/50),
                                           style: NeumorphicStyle(
                                             shape: NeumorphicShape.convex,
                                             boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(50)),
@@ -144,6 +161,7 @@ class _DataViewState extends State<DataView> {
                                             lightSource: LightSource.topLeft,
                                             color: Colors.white
                                           ),
+                                          child: Icon(Icons.edit, size: defaultHeight(context)/50),
                                         )
                                       ],
                                     ),
