@@ -20,6 +20,12 @@ class _DataViewState extends State<DataView> {
   List<dynamic> _dataList = [];
   Map<String, String> _dataMap = {};
 
+  @override
+  void initState(){
+    super.initState();
+    getDataList();
+  }
+
   Future getDataList() async {
     var collections = await FirebaseFirestore.instance
         .collection('MessageData')
@@ -60,7 +66,6 @@ class _DataViewState extends State<DataView> {
 
   @override
   Widget build(BuildContext context) {
-    getDataList();
     return Container(
       height: Responsive.isDesktop(context)
           ? defaultHeight(context) * 9 / 10

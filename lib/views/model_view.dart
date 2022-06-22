@@ -1,3 +1,5 @@
+import 'dart:html';
+import 'package:chatting_app_admin/Models/model.dart';
 import 'package:chatting_app_admin/components/const.dart';
 import 'package:chatting_app_admin/components/responsive.dart';
 import 'package:flutter/material.dart';
@@ -5,7 +7,8 @@ import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:chatting_app_admin/Models/message_data.dart';
+import 'package:intl/intl.dart';
 
 
 class ModelView extends StatefulWidget {
@@ -18,39 +21,74 @@ class ModelView extends StatefulWidget {
 class _ModelViewState extends State<ModelView> {
   ScrollController con = ScrollController();
   PlatformFile? pickedFile;
+  List<dynamic> _dataList = [];
+  List<dynamic> _modelList = [];
   int truePositive = 0;
   int trueNegative = 0;
   int falsePositive = 0;
   int falseNegative = 0;
+  double accuracy = 0;
+  String modelSize = 'MB';
+  DateTime modelDate = DateTime.now();
+  String pickleSize = 'MB';
+  DateTime pickleDate = DateTime.now();
 
-  Future updateData() async {
-    final messageData = await FirebaseFirestore.instance
-        .collection('MessageData');
-    var tp = await FirebaseFirestore.instance
+  @override
+  void initState(){
+    super.initState();
+    getData();
+  }
+
+  Future getData() async {
+    var collections = await FirebaseFirestore.instance
         .collection('MessageData')
-        .where('correction', isEqualTo: 0)
-        .where('label', isEqualTo: 0)
-        .snapshots().length;
-    // var tn = await messageData
-    //     .where('correction', isEqualTo: 1)
-    //     .where('label', isEqualTo: 1)
-    //     .snapshots().length;
-    // var fp = await messageData
-    //     .where('correction', isEqualTo: 1)
-    //     .where('label', isEqualTo: 0)
-    //     .snapshots().length;
-    // var fn = await messageData
-    //     .where('correction', isEqualTo: 0)
-    //     .where('label', isEqualTo: 1)
-    //     .snapshots().length;
+        .orderBy('created_at', descending: true)
+        .get();
 
-    print('AAAAAAAAAAAAAAAAAAAAAAAAAA');
+    var modelCollections = await FirebaseFirestore.instance
+        .collection('Model')
+        .get();
+
     setState(() {
-      truePositive =  tp;
-      // trueNegative =  tn;
-      // falseNegative =  fn;
-      // falsePositive =  fp;
+      _dataList = List.from(
+          collections.docs.map((doc) => Data.fromSnapshot(doc).toJson()));
+      _modelList = List.from(
+        modelCollections.docs.map((doc) => Model.fromSnapshot(doc).toJson()));
+      for (var data in _modelList) {
+        String unit = 'KB';
+        double kb = double.parse(data['size'].toStringAsExponential(2));
+        if (kb > 1000.0) {
+          unit = 'MB';
+          kb  = (kb / 1000);
+        }
+        if (data['id'] == 'pickle') {
+          pickleSize = '$kb $unit';
+          pickleDate = data['date'];
+        } else if (data['id'] == 'model') {
+          modelSize = '$kb $unit';
+          modelDate = data['date'];
+        }
+      }
     });
+
+    updateData();
+  }
+
+  void updateData() {
+    for (var data in _dataList) {
+      var correction = data['correction'];
+      var label = data['label'];
+      if (correction == 0 && label == 0) {
+        truePositive+=1;
+      } else if (correction == 1 && label == 1) {
+        trueNegative+=1;
+      } else if (correction == 1 && label == 0) {
+        falsePositive+=1;
+      } else if (correction == 0 && label == 1) {
+        falseNegative+=1;
+      }
+    }
+    accuracy = (((truePositive + trueNegative) / (truePositive + trueNegative + falseNegative + falsePositive)) * 100);
   }
   
   Future uploadTokenizer() async {
@@ -74,6 +112,26 @@ class _ModelViewState extends State<ModelView> {
     } else {
       return;
     }
+    setState(() {
+      final docModel = FirebaseFirestore
+          .instance
+          .collection('Model')
+          .doc('pickle');
+      double kb = (pickedFile!.size / 1000);
+      docModel.update({
+        'size': kb,
+        'date' : DateTime.now().toLocal()
+      });
+      String unit = 'KB';
+      if (kb > 1000.0) {
+        unit = 'MB';
+        kb  = (kb / 1000);
+      }
+
+      var byteSize = double.parse(kb.toStringAsExponential(2));
+      pickleSize = '$byteSize $unit';
+      pickleDate = DateTime.now().toLocal();
+    });
   }
 
   Future uploadH5File() async {
@@ -97,6 +155,26 @@ class _ModelViewState extends State<ModelView> {
     } else {
       return;
     }
+
+    setState(() {
+      final docModel = FirebaseFirestore
+          .instance
+          .collection('Model')
+          .doc('model');
+      double kb = pickedFile!.size / 1000;
+      docModel.update({
+        'size': kb,
+        'date' : DateTime.now().toLocal()
+      });
+      String unit = 'KB';
+      if (kb > 1000.0) {
+        unit = 'MB';
+        kb  = (kb / 1000);
+      }
+      var byteSize = double.parse(kb.toStringAsExponential(2));
+      modelSize = '$byteSize $unit';
+      modelDate = DateTime.now().toLocal();
+    });
   }
 
   Widget confusionMatrix() {
@@ -513,7 +591,7 @@ class _ModelViewState extends State<ModelView> {
                       child: Material(
                           color: Colors.transparent,
                           child: Text('Akurasi Model'))),
-                  Material(color: Colors.transparent, child: Text('87%'))
+                  Material(color: Colors.transparent, child: Text('${accuracy.toString()}%'))
                 ]),
                 TableRow(children: [
                   SizedBox(
@@ -529,7 +607,7 @@ class _ModelViewState extends State<ModelView> {
                   Material(
                       color: Colors.transparent,
                       child: Text(
-                          'Model terakhir diupdate 10 hari yang lalu oleh Admin 1'))
+                          'Model terakhir diupdate ${DateTime.now().toLocal().difference(modelDate.toLocal()).inDays.toString()} hari yang lalu oleh Admin 1'))
                 ]),
               ],
             ),
@@ -598,10 +676,10 @@ class _ModelViewState extends State<ModelView> {
                 ]),
                 TableRow(children: [
                   Material(color: Colors.transparent, child: Text('Model')),
-                  Material(color: Colors.transparent, child: Text('2.33 MB')),
+                  Material(color: Colors.transparent, child: Text(modelSize)),
                   Material(
                       color: Colors.transparent,
-                      child: Text('9 Mar 2022, 21:11')),
+                      child: Text(DateFormat('dd-MM-yyyy, HH:mm').format(modelDate.toLocal()).toString())),
                   NeumorphicButton(
                       onPressed: uploadH5File,
                       style: NeumorphicStyle(
@@ -623,10 +701,10 @@ class _ModelViewState extends State<ModelView> {
                 ]),
                 TableRow(children: [
                   Material(color: Colors.transparent, child: Text('Pickle')),
-                  Material(color: Colors.transparent, child: Text('40.25 KB')),
+                  Material(color: Colors.transparent, child: Text(pickleSize)),
                   Material(
                       color: Colors.transparent,
-                      child: Text('9 Mar 2022, 21:11')),
+                      child: Text(DateFormat('dd-MM-yyyy, HH:mm').format(pickleDate.toLocal()).toString())),
                   NeumorphicButton(
                       onPressed: uploadTokenizer,
                       style: NeumorphicStyle(
@@ -677,7 +755,6 @@ class _ModelViewState extends State<ModelView> {
 
   @override
   Widget build(BuildContext context) {
-    updateData();
     return Container(
       height: Responsive.isDesktop(context)
           ? defaultHeight(context) * 9 / 10
