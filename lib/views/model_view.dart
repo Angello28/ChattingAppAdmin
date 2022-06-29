@@ -607,7 +607,7 @@ class _ModelViewState extends State<ModelView> {
                   Material(
                       color: Colors.transparent,
                       child: Text(
-                          'Model terakhir diupdate ${DateTime.now().toLocal().difference(modelDate.toLocal()).inDays.toString()} hari yang lalu oleh Admin 1'))
+                          'Model terakhir diupdate ${DateTime.now().toLocal().difference(modelDate.toLocal()).inDays.toString()} hari yang lalu oleh Admin'))
                 ]),
               ],
             ),
