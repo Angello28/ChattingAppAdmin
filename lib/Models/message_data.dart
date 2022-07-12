@@ -7,6 +7,7 @@ class Data {
   int? label;
   int? correction;
   DateTime? created_at;
+  String? value;
 
   Data(this.message, this.label);
 
@@ -16,6 +17,7 @@ class Data {
       'message': message,
       'label': label,
       'correction': correction,
+      'value'     : value,
       'created_at': created_at
     };
   }
@@ -25,6 +27,7 @@ class Data {
         message = snapshot.data()['message'],
         label = snapshot.data()['label'],
         correction = snapshot.data()['correction'],
+        value = snapshot.data()['value'],
         created_at = snapshot.data()['created_at'].toDate();
 
   Map<String, dynamic> toJson() => {
@@ -32,6 +35,7 @@ class Data {
         'message': message,
         'label': label,
         'correction': correction,
+        'value' : value,
         'created_at': created_at
       };
 }

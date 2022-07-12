@@ -45,10 +45,12 @@ class _DataViewState extends State<DataView> {
     sheet.getRangeByName('A1').setText('Kalimat');
     sheet.getRangeByName('B1').setText('Label');
     sheet.getRangeByName('C1').setText('Koreksi');
+    sheet.getRangeByName('D1').setText('value');
     for (var datum in _dataList) {
       sheet.getRangeByName('A$count').setText(datum['message']);
       sheet.getRangeByName('B$count').setNumber(datum['label']);
       sheet.getRangeByName('C$count').setNumber(datum['correction']);
+      sheet.getRangeByName('D$count').setText(datum['value']);
       count++;
     }
 
@@ -154,7 +156,7 @@ class _DataViewState extends State<DataView> {
                                       color: Colors.transparent,
                                       child: Align(
                                         alignment: Alignment.center,
-                                        child: Text("75%"),
+                                        child: Text(datum['value']),
                                       ))
                                   ),
                                   Row(
