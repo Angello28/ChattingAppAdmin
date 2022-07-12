@@ -38,7 +38,7 @@ class _ModelViewState extends State<ModelView> {
     super.initState();
     getData();
   }
-
+  //data fetching from firebase
   Future getData() async {
     var collections = await FirebaseFirestore.instance
         .collection('MessageData')
@@ -74,6 +74,7 @@ class _ModelViewState extends State<ModelView> {
     updateData();
   }
 
+  //update value
   void updateData() {
     for (var data in _dataList) {
       var correction = data['correction'];
@@ -659,7 +660,7 @@ class _ModelViewState extends State<ModelView> {
               },
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
-                TableRow(children: [
+                const TableRow(children: [
                   Material(color: Colors.transparent, child: Text("File")),
                   Material(color: Colors.transparent, child: Text("Ukuran")),
                   Material(
