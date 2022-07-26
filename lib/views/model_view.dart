@@ -9,6 +9,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chatting_app_admin/Models/message_data.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
+import 'dart:html' as html;
 
 
 class ModelView extends StatefulWidget {
@@ -28,10 +31,27 @@ class _ModelViewState extends State<ModelView> {
   int falsePositive = 0;
   int falseNegative = 0;
   double accuracy = 0;
+  double recall = 0;
+  double f1_score = 0;
+  double precision = 0;
+  double error = 0;
   String modelSize = 'MB';
+  String excelUploadStatus = 'Belum ada file spreadsheet yang diunggah';
+  // Model siap untuk dilatih
+  String excelUploadModelStatus = 'File Spreadsheet belum ada';
+  bool trainStatus = false;
+  bool downloadH5Status = false;
+  bool downloadPickleStatus = false;
+  bool excelUploadButtonStatus = true;
   DateTime modelDate = DateTime.now();
   String pickleSize = 'MB';
   DateTime pickleDate = DateTime.now();
+  String savePath = '%USERPROFILE%\\Downloads';
+  // Color(0xff50A3C6)
+  Color uploadSheetButtonColor = Color(0xff50A3C6);
+  Color trainModelButtonColor = Color(0xFFBDBDBD);
+  Color downloadH5ButtonColor = Color(0xFFBDBDBD);
+  Color downloadPickleButtonColor = Color(0xFFBDBDBD);
 
   @override
   void initState(){
@@ -90,6 +110,10 @@ class _ModelViewState extends State<ModelView> {
       }
     }
     accuracy = (((truePositive + trueNegative) / (truePositive + trueNegative + falseNegative + falsePositive)) * 100);
+    recall = (((truePositive) / (truePositive + falseNegative)) * 100);
+    precision = (((truePositive) / (truePositive + falsePositive)) * 100);
+    error = (((falsePositive) / (truePositive)) * 100);
+    f1_score = ((2 * precision * recall)/(precision + recall));
   }
   
   Future uploadTokenizer() async {
@@ -177,6 +201,119 @@ class _ModelViewState extends State<ModelView> {
       modelDate = DateTime.now().toLocal();
     });
   }
+
+  Future uploadExcel() async {
+    if (excelUploadStatus != false) {
+      final _files = (await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['xls', 'xlsx'],
+          allowMultiple: false,
+          allowCompression: false));
+      if (_files == null) {
+        return;
+      }
+      setState(() {
+        pickedFile = _files.files.first;
+      });
+
+      final extension = pickedFile!.extension;
+      if (extension == 'xls' || extension == 'xlsx') {
+        final path = "trainModel/data.xls";
+        final ref = FirebaseStorage.instance.ref().child(path);
+        ref.putData(pickedFile!.bytes!);
+
+      } else {
+        return;
+      }
+
+      setState(() {
+        excelUploadStatus = 'file spreadsheet telah diunggah';
+        excelUploadModelStatus = 'Model siap untuk dilatih';
+        excelUploadButtonStatus = false;
+        trainStatus = true;
+        trainModelButtonColor = Color(0xff50A3C6);
+        uploadSheetButtonColor = Color(0xFFBDBDBD);
+      });
+    } else {
+      return;
+    }
+  }
+
+  Future downloadH5File() async {
+    if (downloadH5Status == true) {
+      print(savePath);
+      final path = "trainModel/model.h5";
+      String downloadUrl = await FirebaseStorage.instance.ref()
+          .child(path)
+          .getDownloadURL();
+
+      html.AnchorElement anchorElement =  new html.AnchorElement(href: downloadUrl);
+      anchorElement.download = downloadUrl;
+      anchorElement.click();
+
+      setState(() {
+        downloadH5Status = false;
+        downloadH5ButtonColor = Color(0xFFBDBDBD);
+        if (downloadPickleStatus == false) {
+          uploadSheetButtonColor = Color(0xff50A3C6);
+          excelUploadButtonStatus = true;
+          excelUploadStatus = 'Belum ada file spreadsheet yang diunggah';
+          excelUploadModelStatus = 'File Spreadsheet belum ada';
+        }
+      });
+    }
+  }
+
+  Future downloadPickleFile() async {
+    if (downloadPickleStatus == true) {
+      final path = "trainModel/tokenizer.pickle";
+      String downloadUrl = await FirebaseStorage.instance.ref()
+          .child(path)
+          .getDownloadURL();
+
+      html.AnchorElement anchorElement =  new html.AnchorElement(href: downloadUrl);
+      anchorElement.download = downloadUrl;
+      anchorElement.click();
+
+      setState(() {
+        downloadPickleStatus = false;
+        downloadPickleButtonColor = Color(0xFFBDBDBD);
+        if (downloadH5Status == false) {
+          uploadSheetButtonColor = Color(0xff50A3C6);
+          excelUploadButtonStatus = true;
+          excelUploadStatus = 'Belum ada file spreadsheet yang diunggah';
+          excelUploadModelStatus = 'File Spreadsheet belum ada';
+        }
+      });
+    } else {
+      return null;
+    }
+  }
+
+  trainModel() async {
+    setState(() {
+      excelUploadModelStatus = 'Model sedang dilatih';
+    });
+    final response = await http.post(
+      Uri.parse('http://4d55-36-76-155-35.ngrok.io/train'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        "Access-Control-Allow-Origin": "*",
+      },
+    );
+
+    setState(() {
+      excelUploadModelStatus = 'Model telah siap dilatih';
+      downloadH5ButtonColor = Color(0xff50A3C6);
+      downloadPickleButtonColor = Color(0xff50A3C6);
+      trainModelButtonColor = Color(0xFFBDBDBD);
+      trainStatus = false;
+      downloadH5Status = true;
+      downloadPickleStatus = true;
+    });
+    // return;
+  }
+
 
   Widget confusionMatrix() {
     return Container(
@@ -581,7 +718,7 @@ class _ModelViewState extends State<ModelView> {
               height: defaultHeight(context) / 40,
             ),
             Table(
-              columnWidths: {
+              columnWidths: const {
                 0: FractionColumnWidth(0.3),
                 1: FractionColumnWidth(0.7)
               },
@@ -589,7 +726,7 @@ class _ModelViewState extends State<ModelView> {
                 TableRow(children: [
                   SizedBox(
                       height: defaultHeight(context) / 18,
-                      child: Material(
+                      child: const Material(
                           color: Colors.transparent,
                           child: Text('Akurasi Model'))),
                   Material(color: Colors.transparent, child: Text('${accuracy.toString()}%'))
@@ -597,13 +734,53 @@ class _ModelViewState extends State<ModelView> {
                 TableRow(children: [
                   SizedBox(
                       height: defaultHeight(context) / 18,
-                      child: Material(
+                      child: const Material(
                           color: Colors.transparent,
-                          child: Text('Algoritma Model'))),
-                  Material(color: Colors.transparent, child: Text('Bi-LSTM'))
+                          child: Text('Presisi Model'))),
+                  Material(color: Colors.transparent, child: Text('${precision.toString()}%'))
                 ]),
                 TableRow(children: [
-                  Material(
+                  SizedBox(
+                      height: defaultHeight(context) / 18,
+                      child: const Material(
+                          color: Colors.transparent,
+                          child: Text('Nilai Recall'))),
+                  Material(color: Colors.transparent, child: Text('${recall.toString()}%'))
+                ]),
+                TableRow(children: [
+                  SizedBox(
+                      height: defaultHeight(context) / 18,
+                      child: const Material(
+                          color: Colors.transparent,
+                          child: Text('Error'))),
+                  Material(color: Colors.transparent, child: Text('${error.toString()}%'))
+                ]),
+                TableRow(children: [
+                  SizedBox(
+                      height: defaultHeight(context) / 18,
+                      child: const Material(
+                          color: Colors.transparent,
+                          child: Text('Threshold'))),
+                  Material(color: Colors.transparent, child: Text('85%'))
+                ]),
+                TableRow(children: [
+                  SizedBox(
+                      height: defaultHeight(context) / 18,
+                      child: const Material(
+                          color: Colors.transparent,
+                          child: Text('F1 Score'))),
+                  Material(color: Colors.transparent, child: Text('${f1_score.toString()}%'))
+                ]),
+                TableRow(children: [
+                  SizedBox(
+                      height: defaultHeight(context) / 18,
+                      child: const Material(
+                          color: Colors.transparent,
+                          child: Text('Algoritma Model'))),
+                  const Material(color: Colors.transparent, child: Text('Bi-LSTM'))
+                ]),
+                TableRow(children: [
+                  const Material(
                       color: Colors.transparent, child: Text('Keterangan')),
                   Material(
                       color: Colors.transparent,
@@ -692,7 +869,8 @@ class _ModelViewState extends State<ModelView> {
                           color: Color(0xff50A3C6),
                           shadowDarkColor: Color(0xff858594)),
                       child: Text("Unggah (*.h5)",
-                          style: TextStyle(color: Colors.white))),
+                          style: TextStyle(color: Colors.white))
+                  ),
                 ]),
                 TableRow(children: [
                   SizedBox(height: defaultHeight(context) / 50),
@@ -727,6 +905,141 @@ class _ModelViewState extends State<ModelView> {
     );
   }
 
+  Widget modelTraining() {
+    return Neumorphic(
+      style: NeumorphicStyle(
+          shape: NeumorphicShape.convex,
+          boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(10)),
+          depth: 2,
+          lightSource: LightSource.topLeft,
+          color: Colors.white70,
+          shadowDarkColor: Color(0xff858594)),
+      child: Container(
+        color: Colors.white70,
+        padding: EdgeInsets.all(defaultHeight(context) / 30),
+        width: Responsive.isDesktop(context)
+            ? defaultWidth(context) / 2.35
+            : Responsive.isTablet(context)
+            ? defaultWidth(context) / 1.45
+            : defaultWidth(context) / 1.15,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: Text(
+                "Model Training",
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: defaultHeight(context) / 35,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            SizedBox(
+              height: defaultHeight(context) / 40,
+            ),
+            Table(
+              columnWidths: {
+                0: FractionColumnWidth(0.3),
+                1: FractionColumnWidth(0.05),
+                2: FractionColumnWidth(0.3),
+                3: FractionColumnWidth(0.05),
+                4: IntrinsicColumnWidth(),
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                const TableRow(children: [
+                  Material(color: Colors.transparent, child: Text("Aksi")),
+                  Material(color: Colors.transparent),
+                  Material(color: Colors.transparent, child: Text("Status")),
+                  Material(color: Colors.transparent),
+                  Material(
+                      color: Colors.transparent, child: Text("Unduh")),
+                ]),
+                TableRow(children: [
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                ]),
+                TableRow(children: [
+                  NeumorphicButton(
+                      onPressed: uploadExcel,
+                      style: NeumorphicStyle(
+                          shape: NeumorphicShape.convex,
+                          boxShape: NeumorphicBoxShape.roundRect(
+                              BorderRadius.circular(10)),
+                          depth: 2,
+                          lightSource: LightSource.topLeft,
+                          color: uploadSheetButtonColor,
+                          shadowDarkColor: Color(0xff858594)),
+                      child: Text("Unggah Spreadsheet (*.xlsx)",
+                          style: TextStyle(color: Colors.white))),
+                  Material(color: Colors.transparent),
+                  Material(
+                      color: Colors.transparent, child: Text(excelUploadStatus)
+                  ),
+                  Material(color: Colors.transparent),
+                  NeumorphicButton(
+                      onPressed: downloadH5File,
+                      style: NeumorphicStyle(
+                          shape: NeumorphicShape.convex,
+                          boxShape: NeumorphicBoxShape.roundRect(
+                              BorderRadius.circular(10)),
+                          depth: 2,
+                          lightSource: LightSource.topLeft,
+                          color: downloadH5ButtonColor,
+                          shadowDarkColor: Color(0xff858594)),
+                      child: Text("Unduh (*.h5)",
+                          style: TextStyle(color: Colors.white))),
+                ]),
+                TableRow(children: [
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                  SizedBox(height: defaultHeight(context) / 50),
+                ]),
+                TableRow(children: [
+                  NeumorphicButton(
+                      onPressed: trainModel,
+                      style: NeumorphicStyle(
+                          shape: NeumorphicShape.convex,
+                          boxShape: NeumorphicBoxShape.roundRect(
+                              BorderRadius.circular(10)),
+                          depth: 2,
+                          lightSource: LightSource.topLeft,
+                          color: trainModelButtonColor,
+                          shadowDarkColor: Color(0xff858594)),
+                      child: Text("Latih Model",
+                          style: TextStyle(color: Colors.white))),
+                  Material(color: Colors.transparent),
+                  Material(color: Colors.transparent, child: Text(
+                      excelUploadModelStatus
+                  )),
+                  Material(color: Colors.transparent),
+                  NeumorphicButton(
+                      onPressed: downloadPickleFile,
+                      style: NeumorphicStyle(
+                          shape: NeumorphicShape.convex,
+                          boxShape: NeumorphicBoxShape.roundRect(
+                              BorderRadius.circular(10)),
+                          depth: 2,
+                          lightSource: LightSource.topLeft,
+                          color: downloadPickleButtonColor,
+                          shadowDarkColor: Color(0xff858594)),
+                      child: Text("Unduh (*.pickle)",
+                          style: TextStyle(color: Colors.white))),
+                ]),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget modelView() {
     return Container(
       padding: EdgeInsets.symmetric(
@@ -745,6 +1058,10 @@ class _ModelViewState extends State<ModelView> {
               height: defaultHeight(context) / 40,
             ),
             modelFile(),
+            SizedBox(
+              height: defaultHeight(context) / 40,
+            ),
+            modelTraining(),
             SizedBox(
               height: defaultHeight(context) / 40,
             ),

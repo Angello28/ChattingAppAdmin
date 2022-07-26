@@ -78,19 +78,33 @@ class _DataViewState extends State<DataView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            child: NeumorphicButton(
-                onPressed: exportExcel,
-                style: NeumorphicStyle(
-                    shape: NeumorphicShape.convex,
-                    boxShape:
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                child: NeumorphicButton(
+                    onPressed: exportExcel,
+                    style: NeumorphicStyle(
+                        shape: NeumorphicShape.convex,
+                        boxShape:
                         NeumorphicBoxShape.roundRect(BorderRadius.circular(10)),
-                    depth: 2,
-                    lightSource: LightSource.topLeft,
-                    color: const Color(0xff50A3C6),
-                    shadowDarkColor: const Color(0xff858594)),
-                child: const Text("Ekspor Spreadsheet (*.xlsx)",
-                    style: TextStyle(color: Colors.white))),
+                        depth: 2,
+                        lightSource: LightSource.topLeft,
+                        color: const Color(0xff50A3C6),
+                        shadowDarkColor: const Color(0xff858594)),
+                    child: const Text("Ekspor Spreadsheet (*.xlsx)",
+                        style: TextStyle(color: Colors.white))),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: Text(
+                  "Keterangan: label 1 = kalimat kasar, label 0 = kalimat tidak kasar",
+                  style: TextStyle(
+                    fontSize: defaultHeight(context)/60
+                  ),
+                ),
+              )
+            ],
           ),
           SizedBox(
             height: defaultHeight(context) / 40,
