@@ -53,6 +53,7 @@ class _ModelViewState extends State<ModelView> {
   Color downloadH5ButtonColor = Color(0xFFBDBDBD);
   Color downloadPickleButtonColor = Color(0xFFBDBDBD);
 
+
   @override
   void initState(){
     super.initState();
@@ -303,7 +304,7 @@ class _ModelViewState extends State<ModelView> {
     );
 
     setState(() {
-      excelUploadModelStatus = 'Model telah siap dilatih';
+      excelUploadModelStatus = 'Model telah selesai dilatih';
       downloadH5ButtonColor = Color(0xff50A3C6);
       downloadPickleButtonColor = Color(0xff50A3C6);
       trainModelButtonColor = Color(0xFFBDBDBD);
@@ -311,6 +312,26 @@ class _ModelViewState extends State<ModelView> {
       downloadH5Status = true;
       downloadPickleStatus = true;
     });
+    Widget okButton = TextButton(
+      child: Text("OK"),
+      onPressed: () { },
+    );
+
+
+    AlertDialog alert = AlertDialog(
+      title: Text("Catatan"),
+      content: Text("Model telah selesai dilatih, file model (h5) dan pickle (.pickle) sudah bisa diunduh"),
+      actions: [
+        okButton,
+      ],
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
     // return;
   }
 
